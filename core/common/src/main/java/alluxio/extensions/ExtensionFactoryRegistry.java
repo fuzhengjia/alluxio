@@ -244,7 +244,7 @@ public class ExtensionFactoryRegistry<T extends ExtensionFactory<?, S>,
         ClassLoader extensionsClassLoader = new ExtensionsClassLoader(new URL[] {extensionURL},
             ClassLoader.getSystemClassLoader());
         ServiceLoader<T> extensionServiceLoader =
-            ServiceLoader.load(mFactoryClass, extensionsClassLoader);
+            ServiceLoader.load(mFactoryClass, Thread.currentThread().getContextClassLoader());
         for (T factory : extensionServiceLoader) {
           LOG.debug("Discovered a factory implementation {} - {} in jar {}", factory.getClass(),
               factory, jarPath);
