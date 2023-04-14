@@ -251,6 +251,10 @@
                   </excludes>
                 </relocation>
                 <relocation>
+                  <pattern>com/google/inject/</pattern>
+                  <shadedPattern>${shading.prefix}.com.google.inject</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>io/</pattern>
                   <shadedPattern>${shading.prefix}.io.</shadedPattern>
                   <excludes>
