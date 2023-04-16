@@ -37,8 +37,11 @@ import alluxio.metrics.MetricsSystem;
 import alluxio.proto.dataserver.Protocol;
 import alluxio.util.FileSystemOptionsUtils;
 import alluxio.util.io.PathUtils;
+import alluxio.wire.BlockLocationInfo;
+import alluxio.wire.WorkerNetAddress;
 
 import com.codahale.metrics.Counter;
+import com.google.common.collect.ImmutableList;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.slf4j.Logger;
@@ -250,5 +253,27 @@ public class DoraCacheFileSystem extends DelegatingFileSystem {
     } else {
       return alluxioPath;
     }
+  }
+
+  @Override
+  public List<BlockLocationInfo> getBlockLocations(AlluxioURI path)
+      throws IOException, AlluxioException {
+    WorkerNetAddress workerNetAddress = mDoraClient.getWorkerNetAddress(path.getPath());
+    BlockLocationInfo blockLocationInfo =
+        new BlockLocationInfo(null, ImmutableList.of(workerNetAddress));
+    ImmutableList.Builder<BlockLocationInfo> listBuilder = ImmutableList.builder();
+    listBuilder.add(blockLocationInfo);
+    return listBuilder.build();
+  }
+
+  @Override
+  public List<BlockLocationInfo> getBlockLocations(URIStatus status)
+      throws IOException, AlluxioException {
+    WorkerNetAddress workerNetAddress = mDoraClient.getWorkerNetAddress(status.getPath());
+    BlockLocationInfo blockLocationInfo =
+        new BlockLocationInfo(null, ImmutableList.of(workerNetAddress));
+    ImmutableList.Builder<BlockLocationInfo> listBuilder = ImmutableList.builder();
+    listBuilder.add(blockLocationInfo);
+    return listBuilder.build();
   }
 }

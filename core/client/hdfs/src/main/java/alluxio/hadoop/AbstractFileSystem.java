@@ -313,16 +313,22 @@ public abstract class AbstractFileSystem extends org.apache.hadoop.fs.FileSystem
       locations.forEach(location -> {
         FileBlockInfo info = location.getBlockInfo();
         List<WorkerNetAddress> workers = location.getLocations();
-        long offset = location.getBlockInfo().getOffset();
-        long end = offset + info.getBlockInfo().getLength();
-        if (end >= start && offset <= start + len) {
-          List<HostAndPort> addresses = workers.stream()
-              .map(worker -> HostAndPort.fromParts(worker.getHost(), worker.getDataPort()))
-              .collect(toList());
+        List<HostAndPort> addresses = workers.stream()
+            .map(worker -> HostAndPort.fromParts(worker.getHost(), worker.getDataPort()))
+            .collect(toList());
+        if (info == null) {
           String[] names = addresses.stream().map(HostAndPort::toString).toArray(String[]::new);
           String[] hosts = addresses.stream().map(HostAndPort::getHost).toArray(String[]::new);
-          blockLocations.add(new BlockLocation(names, hosts, offset,
-              info.getBlockInfo().getLength()));
+          blockLocations.add(new BlockLocation(names, hosts, 0L, 0L));
+        } else {
+          long offset = location.getBlockInfo().getOffset();
+          long end = offset + info.getBlockInfo().getLength();
+          if (end >= start && offset <= start + len) {
+            String[] names = addresses.stream().map(HostAndPort::toString).toArray(String[]::new);
+            String[] hosts = addresses.stream().map(HostAndPort::getHost).toArray(String[]::new);
+            blockLocations.add(new BlockLocation(names, hosts, offset,
+                info.getBlockInfo().getLength()));
+          }
         }
       });
       BlockLocation[] ret = blockLocations.toArray(new BlockLocation[blockLocations.size()]);
