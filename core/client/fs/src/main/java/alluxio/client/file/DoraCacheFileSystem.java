@@ -37,7 +37,11 @@ import alluxio.metrics.MetricsSystem;
 import alluxio.proto.dataserver.Protocol;
 import alluxio.util.FileSystemOptionsUtils;
 import alluxio.util.io.PathUtils;
+import alluxio.wire.BlockInfo;
+import alluxio.wire.BlockLocation;
 import alluxio.wire.BlockLocationInfo;
+import alluxio.wire.FileBlockInfo;
+import alluxio.wire.FileInfo;
 import alluxio.wire.WorkerNetAddress;
 
 import com.codahale.metrics.Counter;
@@ -49,6 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -68,7 +73,7 @@ public class DoraCacheFileSystem extends DelegatingFileSystem {
   /**
    * Wraps a file system instance to forward messages.
    *
-   * @param fs the underlying file system
+   * @param fs      the underlying file system
    * @param context
    */
   public DoraCacheFileSystem(FileSystem fs, FileSystemContext context) {
@@ -218,7 +223,7 @@ public class DoraCacheFileSystem extends DelegatingFileSystem {
 
   /**
    * Converts the Alluxio based path to UfsBaseFileSystem based path if needed.
-   *
+   * <p>
    * UfsBaseFileSystem expects absolute/full file path. The Dora Worker
    * expects absolute/full file path, too. So we need to convert the input path from Alluxio
    * relative path to full UFS path if it is an Alluxio relative path.
@@ -258,9 +263,26 @@ public class DoraCacheFileSystem extends DelegatingFileSystem {
   @Override
   public List<BlockLocationInfo> getBlockLocations(AlluxioURI path)
       throws IOException, AlluxioException {
+    AlluxioURI ufsPath = convertAlluxioPathToUFSPath(path);
     WorkerNetAddress workerNetAddress = mDoraClient.getWorkerNetAddress(path.getPath());
+    URIStatus status = mDoraClient.getStatus(ufsPath.toString(),
+        FileSystemOptionsUtils.getStatusDefaults(mFsContext.getPathConf(path)));
+    // Dora does not have blocks; to apps who need block location info, we return a virtual block
+    // that has size equal to the length of the file, and located on the Dora worker which hosts
+    // the file
+    BlockLocation blockLocation = new BlockLocation().setWorkerAddress(workerNetAddress);
+    BlockInfo bi = new BlockInfo()
+        // a dummy block ID which shouldn't be used to identify the block
+        .setBlockId(1)
+        .setLength(status.getLength())
+        .setLocations(ImmutableList.of(blockLocation));
+    FileBlockInfo fbi = new FileBlockInfo()
+        .setUfsLocations(ImmutableList.of(ufsPath.toString()))
+        .setBlockInfo(bi)
+        // the block is the only block of the file, so offset is 0
+        .setOffset(0);
     BlockLocationInfo blockLocationInfo =
-        new BlockLocationInfo(null, ImmutableList.of(workerNetAddress));
+        new BlockLocationInfo(fbi, ImmutableList.of(workerNetAddress));
     ImmutableList.Builder<BlockLocationInfo> listBuilder = ImmutableList.builder();
     listBuilder.add(blockLocationInfo);
     return listBuilder.build();
@@ -270,8 +292,22 @@ public class DoraCacheFileSystem extends DelegatingFileSystem {
   public List<BlockLocationInfo> getBlockLocations(URIStatus status)
       throws IOException, AlluxioException {
     WorkerNetAddress workerNetAddress = mDoraClient.getWorkerNetAddress(status.getPath());
+    // Dora does not have blocks; to apps who need block location info, we return a virtual block
+    // that has size equal to the length of the file, and located on the Dora worker which hosts
+    // the file
+    BlockLocation blockLocation = new BlockLocation().setWorkerAddress(workerNetAddress);
+    BlockInfo bi = new BlockInfo()
+        // a dummy block ID which shouldn't be used to identify the block
+        .setBlockId(1)
+        .setLength(status.getLength())
+        .setLocations(ImmutableList.of(blockLocation));
+    FileBlockInfo fbi = new FileBlockInfo()
+        .setUfsLocations(ImmutableList.of(status.getPath()))
+        .setBlockInfo(bi)
+        // the block is the only block of the file, so offset is 0
+        .setOffset(0);
     BlockLocationInfo blockLocationInfo =
-        new BlockLocationInfo(null, ImmutableList.of(workerNetAddress));
+        new BlockLocationInfo(fbi, ImmutableList.of(workerNetAddress));
     ImmutableList.Builder<BlockLocationInfo> listBuilder = ImmutableList.builder();
     listBuilder.add(blockLocationInfo);
     return listBuilder.build();
