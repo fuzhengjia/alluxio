@@ -262,7 +262,7 @@ public class DoraCacheFileSystem extends DelegatingFileSystem {
   public List<BlockLocationInfo> getBlockLocations(AlluxioURI path)
       throws IOException, AlluxioException {
     AlluxioURI ufsPath = convertAlluxioPathToUFSPath(path);
-    WorkerNetAddress workerNetAddress = mDoraClient.getWorkerNetAddress(path.getPath());
+    WorkerNetAddress workerNetAddress = mDoraClient.getWorkerNetAddress(ufsPath.toString());
     URIStatus status = mDoraClient.getStatus(ufsPath.toString(),
         FileSystemOptionsUtils.getStatusDefaults(mFsContext.getPathConf(path)));
     // Dora does not have blocks; to apps who need block location info, we return a virtual block
