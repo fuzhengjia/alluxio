@@ -353,7 +353,7 @@ public class PagedDoraWorker extends AbstractWorker implements DoraWorker {
     alluxio.grpc.FileInfo.Builder infoBuilder = alluxio.grpc.FileInfo.newBuilder()
         .setFileId(ufsFullPath.hashCode())
         .setName(filename)
-        .setPath(ufsUri.toString())
+        .setPath(relativePath)
         .setUfsPath(ufsUri.toString())
         .setMode(status.getMode())
         .setFolder(status.isDirectory())
